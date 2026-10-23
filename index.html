@@ -1,0 +1,1036 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Donkey Kong Multi Screen</title>
+<meta name="description" content="A fan-made tribute to the 1982 Donkey Kong multi screen LCD handheld, built for iPhone.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DK Multi">
+<meta name="theme-color" content="#16110d">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<style>
+  :root {
+    --sw: 300px;
+    --bg: #16110d;
+    --shell-hi: #e8742f;
+    --shell-lo: #b9481b;
+    --gold: #d8b45e;
+    --gold-dk: #9c7a2c;
+    --bezel: #201a17;
+    --btn: #2a2420;
+    --btn-hi: #4a403a;
+    --ink: #2b1a0f;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%; background: var(--bg); color: #f3e6c8;
+    font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    overflow: hidden; overscroll-behavior: none; touch-action: none;
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  }
+  body {
+    display: flex; align-items: center; justify-content: center;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  #device { display: flex; flex-direction: column; align-items: center; }
+
+  .shell {
+    background: linear-gradient(160deg, var(--shell-hi), var(--shell-lo));
+    border-radius: 14px; padding: 10px 12px;
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.25), inset 0 -3px 0 rgba(0,0,0,.25), 0 8px 24px rgba(0,0,0,.5);
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .face {
+    background: linear-gradient(180deg, #e9cd84, var(--gold));
+    border-radius: 8px; padding: 8px 10px 6px;
+    box-shadow: inset 0 0 0 2px var(--gold-dk);
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .bezel {
+    background: var(--bezel); padding: 7px; border-radius: 5px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,.8);
+  }
+  canvas { display: block; width: var(--sw); height: calc(var(--sw) * 0.75); border-radius: 2px; }
+  .title {
+    color: var(--ink); font-weight: 900; letter-spacing: .14em; font-size: 15px;
+    margin-top: 5px; text-transform: uppercase;
+  }
+  .title small { font-weight: 700; letter-spacing: .2em; font-size: 9px; margin-left: 6px; opacity: .75; }
+  .hinge {
+    width: calc(var(--sw) + 10px); height: 12px; margin: -2px 0;
+    background: linear-gradient(180deg, #5b2a12, #2c1408 45%, #5b2a12);
+    border-radius: 3px; z-index: 1;
+  }
+
+  .controls {
+    width: max(calc(var(--sw) + 20px), 296px); display: grid;
+    grid-template-columns: 1fr auto 1fr; align-items: center; margin-top: 12px; gap: 6px;
+  }
+  .dpad { position: relative; width: 138px; height: 138px; justify-self: start; }
+  .dpad button { position: absolute; width: 46px; height: 46px; }
+  .dpad .u { left: 46px; top: 0; border-radius: 6px 6px 0 0; }
+  .dpad .d { left: 46px; bottom: 0; border-radius: 0 0 6px 6px; }
+  .dpad .l { left: 0; top: 46px; border-radius: 6px 0 0 6px; }
+  .dpad .r { right: 0; top: 46px; border-radius: 0 6px 6px 0; }
+  .dpad .c { position: absolute; left: 46px; top: 46px; width: 46px; height: 46px; background: var(--btn); }
+  .dpad::before {
+    content: ""; position: absolute; inset: -6px; border-radius: 50%;
+    background: rgba(0,0,0,.14);
+  }
+  button {
+    font: inherit; color: #e8dcc0; border: 0; background: var(--btn); padding: 0;
+    box-shadow: 0 3px 0 #0e0b09, inset 0 1px 0 var(--btn-hi);
+    touch-action: none; cursor: pointer;
+  }
+  button.down, button:active { transform: translateY(2px); box-shadow: 0 1px 0 #0e0b09, inset 0 1px 0 var(--btn-hi); }
+  .dpad button::after {
+    content: ""; position: absolute; left: 50%; top: 50%; width: 0; height: 0;
+    border: 7px solid transparent; transform: translate(-50%, -50%);
+  }
+  .dpad .u::after { border-bottom-color: #8d8278; margin-top: -4px; }
+  .dpad .d::after { border-top-color: #8d8278; margin-top: 4px; }
+  .dpad .l::after { border-right-color: #8d8278; margin-left: -4px; }
+  .dpad .r::after { border-left-color: #8d8278; margin-left: 4px; }
+
+  .meta { display: flex; flex-direction: column; gap: 9px; align-items: center; }
+  .meta button {
+    width: 62px; height: 20px; border-radius: 10px; font-size: 9px; font-weight: 800;
+    letter-spacing: .08em; color: var(--ink); background: #c9a457;
+    box-shadow: 0 2px 0 #6b5222, inset 0 1px 0 #f0d79a;
+  }
+  .meta button.down, .meta button:active { box-shadow: 0 0 0 #6b5222, inset 0 1px 0 #f0d79a; }
+  .meta .mute { background: #8f7a52; }
+  .meta .mute.off { opacity: .55; }
+
+  .jumpwrap { justify-self: end; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .jump {
+    width: 82px; height: 82px; border-radius: 50%; font-weight: 900; font-size: 13px; letter-spacing: .1em;
+    background: radial-gradient(circle at 40% 35%, #4a3f39, var(--btn) 70%);
+    box-shadow: 0 4px 0 #0e0b09, 0 0 0 5px rgba(0,0,0,.14);
+  }
+  .jump.down, .jump:active { box-shadow: 0 1px 0 #0e0b09, 0 0 0 5px rgba(0,0,0,.14); }
+  .lbl { color: var(--ink); font-size: 9px; font-weight: 800; letter-spacing: .12em; }
+  .credit { color: #7b6a55; font-size: 9px; margin-top: 8px; text-align: center; }
+
+  .stack { display: flex; flex-direction: column; align-items: stretch; }
+  .hinge { width: auto; margin: -2px 16px; }
+
+  /* Landscape: screens in the middle, D-pad left, JUMP right (like the real clamshell). */
+  body.land .controls { display: block; width: 0; height: 0; margin: 0; }
+  body.land .dpad { position: fixed; left: calc(env(safe-area-inset-left) + 26px); top: 50%; transform: translateY(-50%); }
+  body.land .meta { position: fixed; right: calc(env(safe-area-inset-right) + 22px); top: calc(env(safe-area-inset-top) + 18px); }
+  body.land .jumpwrap { position: fixed; right: calc(env(safe-area-inset-right) + 18px); bottom: calc(env(safe-area-inset-bottom) + 18px); }
+  body.land .credit, body.land .lbl { display: none; }
+  body.land .title { font-size: 12px; margin-top: 3px; }
+  body.land .shell { padding: 6px 10px; }
+  body.land .face { padding: 6px 8px 4px; }
+</style>
+</head>
+<body>
+<div id="device">
+  <div class="stack">
+    <div class="shell">
+      <div class="face">
+        <div class="bezel"><canvas id="top"></canvas></div>
+        <div class="title">Donkey Kong<small>MULTI SCREEN</small></div>
+      </div>
+    </div>
+    <div class="hinge"></div>
+    <div class="shell">
+      <div class="face">
+        <div class="bezel"><canvas id="bot"></canvas></div>
+      </div>
+      <div class="controls" id="controls">
+        <div class="dpad">
+          <div class="c"></div>
+          <button class="u" data-k="U" aria-label="Up"></button>
+          <button class="l" data-k="L" aria-label="Left"></button>
+          <button class="r" data-k="R" aria-label="Right"></button>
+          <button class="d" data-k="D" aria-label="Down"></button>
+        </div>
+        <div class="side meta">
+          <button data-k="A">GAME A</button>
+          <button data-k="B">GAME B</button>
+          <button data-k="T">TIME</button>
+          <button class="mute" data-k="M" id="mute">SOUND</button>
+        </div>
+        <div class="side jumpwrap">
+          <button class="jump" data-k="J">JUMP</button>
+          <div class="lbl">JUMP</div>
+        </div>
+      </div>
+    </div>
+    <div class="credit">Fan-made tribute · not affiliated with Nintendo</div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ==========================================================================
+   Donkey Kong Multi Screen — LCD handheld tribute
+   Two 320x240 logical screens. Everything that can light up is a fixed
+   "segment"; unlit segments are drawn as faint ghosts like a real LCD.
+   ========================================================================== */
+
+const W = 320, H = 240, P = 2;              // logical screen size, sprite pixel size
+const TOP = 0, BOT = 1;
+
+/* ---------- tiny bitmap toolkit ---------- */
+function bmp(rows) { return { w: Math.max(...rows.map(r => r.length)), h: rows.length, rows }; }
+class Grid {
+  constructor(w, h) { this.w = w; this.h = h; this.c = Array.from({ length: h }, () => Array(w).fill(0)); }
+  rect(x, y, w, h, v = 1) { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) if (j >= 0 && j < this.h && i >= 0 && i < this.w) this.c[j][i] = v; return this; }
+  blit(rows, x, y) { rows.forEach((r, j) => [...r].forEach((ch, i) => { if (ch === '#') this.rect(x + i, y + j, 1, 1); else if (ch === 'o') this.rect(x + i, y + j, 1, 1, 0); })); return this; }
+  bmp() { return bmp(this.c.map(r => r.map(v => v ? '#' : '.').join(''))); }
+}
+// Draw a bitmap with its bottom-centre at (cx, by). Runs are merged to keep fillRect calls low.
+function drawBmp(ctx, b, cx, by, flip = false, vflip = false) {
+  const x0 = Math.round(cx - b.w * P / 2), y0 = Math.round(by - b.h * P);
+  for (let r = 0; r < b.h; r++) {
+    const row = b.rows[vflip ? b.h - 1 - r : r];
+    let c = 0;
+    while (c < b.w) {
+      if (row[c] !== '#') { c++; continue; }
+      let e = c; while (e < b.w && row[e] === '#') e++;
+      const sx = flip ? (b.w - e) : c;
+      ctx.fillRect(x0 + sx * P, y0 + r * P, (e - c) * P, P);
+      c = e;
+    }
+  }
+}
+
+/* ---------- sprites ---------- */
+const S = {};
+S.marioStand = bmp([
+  "...#####...",
+  "..#########",
+  "..###.#....",
+  ".#.##.###..",
+  ".#.##..###.",
+  ".##...####.",
+  "...######..",
+  "..##.#.#...",
+  ".###.#.###.",
+  "####.#.####",
+  "..#######..",
+  "..###.###..",
+  ".###...###.",
+  "####...####",
+]);
+S.marioStride = bmp([
+  "...#####...",
+  "..#########",
+  "..###.#....",
+  ".#.##.###..",
+  ".#.##..###.",
+  ".##...####.",
+  "...######..",
+  "..###.#....",
+  ".##.#####..",
+  ".#.######..",
+  "..######...",
+  ".####.###..",
+  "####...###.",
+  "###.....##.",
+]);
+S.marioJump = bmp([
+  "#..#####...",
+  "#.#########",
+  "#.###.#....",
+  "##.##.###..",
+  ".#.##..###.",
+  ".###..####.",
+  "..#######..",
+  "..##.#.#...",
+  "..###.####.",
+  "...#######.",
+  "..#######..",
+  ".####.###..",
+  "####...###.",
+  "........##.",
+]);
+S.marioClimb = bmp([
+  "#..#####..#",
+  "#.#######.#",
+  "##.#####.##",
+  ".###...###.",
+  "..#######..",
+  "..#######..",
+  "..#######..",
+  "..###.###..",
+  "..##...##..",
+  ".###...###.",
+  "###.....###",
+]);
+S.marioHang = bmp([
+  "##.......##",
+  ".#.......#.",
+  ".#.#####.#.",
+  ".#########.",
+  "..#######..",
+  "...#####...",
+  "..#######..",
+  "..#######..",
+  "..###.###..",
+  "..##...##..",
+  "..#.....#..",
+  ".##.....##.",
+]);
+S.marioCrash = bmp([
+  "..#...#.....#..",
+  "...#..#....#...",
+  ".....#####.....",
+  "#...#######..##",
+  "##.###.#.#.####",
+  ".#.##.....#####",
+  ".####.####.###.",
+  "###############",
+  "#.#####..####.#",
+]);
+S.barrelA = bmp([
+  "..######..",
+  ".##....##.",
+  "##.####.##",
+  "#.##..##.#",
+  "#.#.##.#.#",
+  "#.##..##.#",
+  "##.####.##",
+  ".##....##.",
+  "..######..",
+]);
+S.barrelB = bmp([
+  "..######..",
+  ".##.##.##.",
+  "##..##..##",
+  "#.######.#",
+  "######.###",
+  "#.######.#",
+  "##..##..##",
+  ".##.##.##.",
+  "..######..",
+]);
+S.barrelSide = bmp([
+  ".############.",
+  "#..#......#..#",
+  "#..#......#..#",
+  "##############",
+  "#..#......#..#",
+  "#..#......#..#",
+  ".############.",
+]);
+S.pauline = bmp([
+  "...#####....",
+  "..#######...",
+  ".###.#.##...",
+  ".##.....##..",
+  "..##...##...",
+  "...#####....",
+  "..#######...",
+  ".#.#####.#..",
+  "#..#####..#.",
+  "#..#####..#.",
+  "...#####....",
+  "..#######...",
+  ".#########..",
+  "###########.",
+  "...#...#....",
+  "..##...##...",
+]);
+S.paulineWave = bmp([
+  "#..#####....",
+  "#.#######...",
+  "####.#.##...",
+  ".##.....##..",
+  "..##...##...",
+  "...#####....",
+  "..#######...",
+  "..######.#..",
+  "...#####..#.",
+  "...#####..#.",
+  "...#####....",
+  "..#######...",
+  ".#########..",
+  "###########.",
+  "...#...#....",
+  "..##...##...",
+]);
+S.heart = bmp([".##.##.", "#######", "#######", ".#####.", "..###..", "...#..."]);
+S.head = bmp([".####.", "######", "#.##.#", "######", ".#..#.", "..##.."]);
+
+// Donkey Kong, composed from parts so the poses line up.
+const DK_HEAD = [
+  "....######....",
+  "..##########..",
+  ".############.",
+  "###.o####.o###",
+  "##.##o##o##.##",
+  "##o........o##",
+  "###.######.###",
+  "####......####",
+  ".####....####.",
+  "..##########..",
+];
+function dkBody(g, ox, oy, arms) {
+  g.blit(DK_HEAD, ox + 6, oy);
+  g.rect(ox + 3, oy + 9, 20, 3);                    // shoulders
+  g.rect(ox + 6, oy + 12, 14, 7);                   // torso
+  g.rect(ox + 9, oy + 13, 8, 4, 0); g.rect(ox + 10, oy + 14, 6, 2);   // chest
+  g.rect(ox + 7, oy + 19, 12, 1);
+  g.rect(ox + 6, oy + 20, 5, 4); g.rect(ox + 15, oy + 20, 5, 4);       // legs
+  g.rect(ox + 4, oy + 23, 7, 2); g.rect(ox + 15, oy + 23, 7, 2);       // feet
+  if (arms === 'down') {
+    g.rect(ox + 1, oy + 10, 4, 9); g.rect(ox + 21, oy + 10, 4, 9);
+    g.rect(ox + 0, oy + 17, 5, 3); g.rect(ox + 21, oy + 17, 5, 3);
+  }
+  if (arms === 'up') {
+    g.rect(ox + 2, oy - 8, 4, 19); g.rect(ox + 20, oy - 8, 4, 19);
+    g.rect(ox + 1, oy - 10, 5, 3); g.rect(ox + 20, oy - 10, 5, 3);
+  }
+  if (arms === 'throw') {
+    g.rect(ox + 21, oy + 10, 4, 9); g.rect(ox + 21, oy + 17, 5, 3);   // right arm down
+    g.rect(ox - 6, oy + 9, 10, 3); g.rect(ox - 9, oy + 8, 4, 5);     // left arm flung out
+  }
+}
+S.dkIdle = (() => { const g = new Grid(36, 36); dkBody(g, 5, 11, 'down'); return g.bmp(); })();
+S.dkUp = (() => {
+  const g = new Grid(36, 36); dkBody(g, 5, 11, 'up');
+  g.blit([
+    "..##########..",
+    ".##..#..#..##.",
+    "##############",
+    "#...#....#...#",
+    "##############",
+    ".##..#..#..##.",
+    "..##########..",
+  ], 11, 0);
+  return g.bmp();
+})();
+S.dkThrow = (() => { const g = new Grid(36, 36); dkBody(g, 9, 11, 'throw'); return g.bmp(); })();
+S.dkFall = (() => {
+  const g = new Grid(36, 30); dkBody(g, 5, 2, 'up');
+  g.blit(["#...#", ".#.#.", "..#..", ".#.#.", "#...#"], 1, 22);
+  g.blit(["#...#", ".#.#.", "..#..", ".#.#.", "#...#"], 30, 22);
+  return g.bmp();
+})();
+
+/* ---------- playfield geometry ---------- */
+const GX = x => 45 + x * 46;
+function groundY(row, x) {
+  switch (row) {
+    case 0: return 226;
+    case 1: return 150 + 2 * x;
+    case 2: return 80 + 2 * (5 - x);
+    case 3: return 214 + 2 * x;
+    case 4: return 146;
+  }
+}
+const rowScr = r => r >= 3 ? TOP : BOT;
+const rowMax = r => r === 4 ? 3 : 5;
+const rowFace = [1, -1, 1, -1, 1];                // direction Mario climbs along each girder
+const LADDERS = [{ lo: 0, hi: 1, x: 5 }, { lo: 1, hi: 2, x: 0 }, { lo: 2, hi: 3, x: 5 }, { lo: 3, hi: 4, x: 0 }];
+function ladderStep(i, s) {
+  const L = LADDERS[i];
+  if (i === 2) return { scr: BOT, x: GX(5), y: s === 1 ? 58 : 32 };
+  const lo = groundY(L.lo, L.x), hi = groundY(L.hi, L.x);
+  return { scr: rowScr(L.lo), x: GX(L.x), y: Math.round(lo - (lo - hi) * s / 3) };
+}
+const SWITCH_X = 2, EDGE_X = 3;
+const PIVOT = { x: 258, y: 64 };
+const HOOK = [{ x: 288, y: 98 }, { x: 258, y: 108 }, { x: 228, y: 98 }];   // 2 = reachable from the edge
+const LEAP = { x: 206, y: 128 };
+const WIRES_X = [90, 106, 174, 190];
+const DK_POS = { x: 140, y: 103 };
+
+// The barrel route: DK's hand -> down the left -> zig-zag to the bottom of the lower screen.
+const PATH = [];
+PATH.push({ scr: TOP, x: 72, y: 102, side: 1 });
+PATH.push({ scr: TOP, x: 15, y: 132, side: 1 });
+PATH.push({ scr: TOP, x: 15, y: 182, side: 1 });
+for (let x = 0; x <= 5; x++) PATH.push({ scr: TOP, x: GX(x), y: groundY(3, x), row: 3, gx: x });
+PATH.push({ scr: TOP, x: 303, y: 240, side: 1 });
+PATH.push({ scr: BOT, x: 303, y: 42, side: 1 });
+for (let x = 5; x >= 0; x--) PATH.push({ scr: BOT, x: GX(x), y: groundY(2, x), row: 2, gx: x });
+PATH.push({ scr: BOT, x: 15, y: 124, side: 1 });
+for (let x = 0; x <= 5; x++) PATH.push({ scr: BOT, x: GX(x), y: groundY(1, x), row: 1, gx: x });
+PATH.push({ scr: BOT, x: 303, y: 196, side: 1 });
+for (let x = 5; x >= 0; x--) PATH.push({ scr: BOT, x: GX(x), y: groundY(0, x), row: 0, gx: x });
+PATH.push({ scr: BOT, x: 10, y: 240, side: 1 });
+
+// Sliding iron girder over the middle floor of the lower screen.
+const IG_X = [2, 3, 4];
+const igRect = k => ({ x: GX(IG_X[k]) - 19, y: groundY(1, IG_X[k]) - 47, w: 38, h: 7 });
+
+/* ---------- segments (every LCD element) ---------- */
+const SEG = [];
+const seg = (id, scr, draw) => SEG.push({ id, scr, draw });
+
+for (let r = 0; r <= 4; r++) for (let x = 0; x <= rowMax(r); x++) {
+  const flip = rowFace[r] < 0, gy = groundY(r, x), scr = rowScr(r);
+  seg(`mg${r}_${x}`, scr, c => drawBmp(c, x % 2 ? S.marioStride : S.marioStand, GX(x), gy, flip));
+  if (!(r === 4 && x === EDGE_X)) seg(`mj${r}_${x}`, scr, c => drawBmp(c, S.marioJump, GX(x), gy - 17, flip));
+}
+for (let i = 0; i < LADDERS.length; i++) for (let s = 1; s <= 2; s++) {
+  const p = ladderStep(i, s);
+  seg(`ml${i}_${s}`, p.scr, c => drawBmp(c, S.marioClimb, p.x, p.y));
+}
+seg('mleap', TOP, c => drawBmp(c, S.marioJump, LEAP.x, LEAP.y));
+HOOK.forEach((h, k) => {
+  seg(`mh${k}`, TOP, c => drawBmp(c, S.marioHang, h.x, h.y + 26));
+  seg(`hk${k}`, TOP, c => {
+    c.lineWidth = 2; c.beginPath(); c.moveTo(PIVOT.x, PIVOT.y + 4); c.lineTo(h.x, h.y - 6); c.stroke();
+    c.fillRect(h.x - 4, h.y - 7, 8, 3);
+    c.beginPath(); c.lineWidth = 3; c.arc(h.x, h.y, 4, Math.PI * 1.5, Math.PI * 0.9); c.stroke();
+  });
+});
+PATH.forEach((n, i) => seg(`b${i}`, n.scr, c => drawBmp(c, n.side ? S.barrelSide : (n.gx % 2 ? S.barrelB : S.barrelA), n.x, n.y)));
+seg('dkIdle', TOP, c => drawBmp(c, S.dkIdle, DK_POS.x, DK_POS.y));
+seg('dkUp', TOP, c => drawBmp(c, S.dkUp, DK_POS.x, DK_POS.y));
+seg('dkThrow', TOP, c => drawBmp(c, S.dkThrow, DK_POS.x - 4, DK_POS.y));
+seg('dkFall1', TOP, c => drawBmp(c, S.dkFall, DK_POS.x, 168, false, true));
+seg('dkFall2', TOP, c => drawBmp(c, S.dkFall, DK_POS.x, 226));
+seg('plat', TOP, c => {
+  c.fillRect(82, 104, 116, 2); c.fillRect(82, 110, 116, 2);
+  for (let x = 82; x < 198; x += 8) { c.fillRect(x, 106, 2, 4); }
+});
+WIRES_X.forEach((wx, k) => seg(`w${k}`, TOP, c => { for (let y = 7; y < 103; y += 6) c.fillRect(wx - 1.5, y, 3, 4); }));
+seg('pau', TOP, c => drawBmp(c, S.pauline, 30, 54));
+seg('pauW', TOP, c => drawBmp(c, S.paulineWave, 30, 54));
+seg('help', TOP, c => { c.font = 'bold 10px Helvetica, Arial'; c.fillText('HELP!', 46, 18); });
+seg('heart', TOP, c => drawBmp(c, S.heart, 56, 40));
+seg('lev0', TOP, c => lever(c, -1));
+seg('lev1', TOP, c => lever(c, 1));
+function lever(c, d) {
+  c.fillRect(154, 140, 8, 6);
+  c.lineWidth = 3; c.beginPath(); c.moveTo(158, 140); c.lineTo(158 + d * 9, 126); c.stroke();
+  c.beginPath(); c.arc(158 + d * 9, 125, 3.5, 0, Math.PI * 2); c.fill();
+}
+IG_X.forEach((_, k) => seg(`ig${k}`, BOT, c => {
+  const r = igRect(k);
+  c.fillRect(r.x, r.y, r.w, 2); c.fillRect(r.x, r.y + r.h - 2, r.w, 2);
+  for (let x = r.x; x < r.x + r.w; x += 6) c.fillRect(x, r.y + 2, 2, r.h - 4);
+  c.fillRect(r.x + r.w / 2 - 1, 0, 2, r.y);   // its hanging cable
+}));
+// labels
+seg('gameA', BOT, c => { c.font = 'bold 9px Helvetica, Arial'; c.fillText('GAME A', 8, 14); });
+seg('gameB', BOT, c => { c.font = 'bold 9px Helvetica, Arial'; c.fillText('GAME B', 8, 26); });
+seg('missL', TOP, c => { c.font = 'bold 9px Helvetica, Arial'; c.fillText('MISS', 226, 50); });
+for (let k = 0; k < 3; k++) seg(`miss${k}`, TOP, c => drawBmp(c, S.head, 262 + k * 15, 51));
+seg('am', TOP, c => { c.font = 'bold 7px Helvetica, Arial'; c.fillText('AM', 210, 14); });
+seg('pm', TOP, c => { c.font = 'bold 7px Helvetica, Arial'; c.fillText('PM', 210, 26); });
+// 7-segment digits
+const DIG = { x: 226, y: 6, w: 13, h: 24, gap: 21 };
+const SEGS7 = { a: [1, 0, 0], b: [2, 1, 1], c: [2, 2, 1], d: [1, 4, 0], e: [0, 2, 1], f: [0, 1, 1], g: [1, 2, 0] };
+for (let d = 0; d < 4; d++) for (const s in SEGS7) seg(`d${d}${s}`, TOP, c => seg7(c, d, s));
+seg('colon', TOP, c => { const x = DIG.x + DIG.gap * 2 - 5; c.fillRect(x, DIG.y + 7, 3, 3); c.fillRect(x, DIG.y + 15, 3, 3); });
+function seg7(c, d, s) {
+  const x0 = DIG.x + d * DIG.gap + (d >= 2 ? 4 : 0), y0 = DIG.y, w = DIG.w, h = DIG.h / 2, t = 3;
+  const [kind, a, b] = SEGS7[s];
+  if (s === 'a' || s === 'd' || s === 'g') {
+    const y = y0 + (s === 'a' ? 0 : s === 'g' ? h - t / 2 : 2 * h - t);
+    c.beginPath(); c.moveTo(x0 + 1, y + t / 2); c.lineTo(x0 + t, y); c.lineTo(x0 + w - t, y); c.lineTo(x0 + w - 1, y + t / 2);
+    c.lineTo(x0 + w - t, y + t); c.lineTo(x0 + t, y + t); c.closePath(); c.fill();
+  } else {
+    const x = (s === 'b' || s === 'c') ? x0 + w - t : x0;
+    const y = y0 + ((s === 'b' || s === 'f') ? 0 : h);
+    c.beginPath(); c.moveTo(x + t / 2, y + 1); c.lineTo(x + t, y + t); c.lineTo(x + t, y + h - t / 2);
+    c.lineTo(x + t / 2, y + h); c.lineTo(x, y + h - t / 2); c.lineTo(x, y + t); c.closePath(); c.fill();
+  }
+}
+const DIGITS = ['abcdef', 'bc', 'abdeg', 'abcdg', 'bcfg', 'acdfg', 'acdefg', 'abc', 'abcdefg', 'abcdfg'];
+
+/* ---------- printed background (never changes) ---------- */
+function girder(c, x1, y1, x2, y2, th = 8) {
+  c.lineWidth = 1.6;
+  c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.moveTo(x1, y1 + th); c.lineTo(x2, y2 + th); c.stroke();
+  const n = Math.round((x2 - x1) / 9);
+  c.beginPath();
+  for (let i = 0; i < n; i++) {
+    const ta = i / n, tb = (i + 1) / n;
+    const xa = x1 + (x2 - x1) * ta, ya = y1 + (y2 - y1) * ta, xb = x1 + (x2 - x1) * tb, yb = y1 + (y2 - y1) * tb;
+    if (i % 2) { c.moveTo(xa, ya); c.lineTo(xb, yb + th); } else { c.moveTo(xa, ya + th); c.lineTo(xb, yb); }
+  }
+  c.stroke();
+}
+function ladder(c, x, yTop, yBot) {
+  c.lineWidth = 1.6; c.beginPath();
+  c.moveTo(x - 8, yTop); c.lineTo(x - 8, yBot); c.moveTo(x + 8, yTop); c.lineTo(x + 8, yBot);
+  for (let y = yBot - 6; y > yTop; y -= 7) { c.moveTo(x - 8, y); c.lineTo(x + 8, y); }
+  c.stroke();
+}
+function rowGirder(c, r, x1 = GX(0) - 26, x2 = GX(rowMax(r)) + 26) {
+  const slope = (groundY(r, 1) - groundY(r, 0)) / 46;
+  girder(c, x1, groundY(r, 0) + (x1 - GX(0)) * slope, x2, groundY(r, 0) + (x2 - GX(0)) * slope);
+}
+function printBackground(c, scr) {
+  const g = c.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, '#d5d8c2'); g.addColorStop(1, '#c2c6ae');
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  const red = 'rgba(176, 72, 52, .55)', teal = 'rgba(52, 120, 128, .5)', gold = 'rgba(176, 128, 36, .55)';
+  if (scr === BOT) {
+    c.strokeStyle = teal;
+    ladder(c, GX(5), groundY(1, 5) + 8, groundY(0, 5));
+    ladder(c, GX(0), groundY(2, 0) + 8, groundY(1, 0));
+    ladder(c, GX(5), 0, groundY(2, 5));
+    c.strokeStyle = red;
+    girder(c, 0, 226, W, 226);
+    rowGirder(c, 1); rowGirder(c, 2);
+  } else {
+    c.strokeStyle = teal;
+    ladder(c, GX(5), groundY(3, 5) + 8, H);
+    ladder(c, GX(0), groundY(4, 0) + 8, groundY(3, 0));
+    c.strokeStyle = red;
+    rowGirder(c, 3);
+    rowGirder(c, 4, GX(0) - 26, GX(3) + 22);
+    girder(c, 6, 56, 66, 56, 6);           // Pauline's ledge
+    girder(c, 72, 0, 208, 0, 5);           // ceiling beam
+    // crane
+    c.strokeStyle = gold; c.lineWidth = 1.6;
+    girder(c, 218, 58, W - 2, 58, 7);
+    c.beginPath();
+    c.moveTo(298, 65); c.lineTo(298, 152); c.moveTo(312, 65); c.lineTo(312, 152);
+    for (let y = 65; y < 150; y += 10) { c.moveTo(298, y); c.lineTo(312, y + 10); c.moveTo(312, y); c.lineTo(298, y + 10); }
+    c.stroke();
+    girder(c, 290, 152, W, 152, 5);
+    c.beginPath(); c.arc(PIVOT.x, PIVOT.y, 4, 0, Math.PI * 2); c.stroke();
+  }
+}
+
+/* ---------- rendering ---------- */
+const canvases = [document.getElementById('top'), document.getElementById('bot')];
+const ctxs = canvases.map(cv => cv.getContext('2d'));
+const ghostLayers = [];
+const INK = '#1c1d17', GHOST = 'rgba(30, 32, 24, 0.075)';
+let scale = 1, dpr = 1;
+
+function buildGhosts() {
+  for (let s = 0; s < 2; s++) {
+    const off = document.createElement('canvas');
+    off.width = canvases[s].width; off.height = canvases[s].height;
+    const c = off.getContext('2d');
+    c.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
+    printBackground(c, s);
+    c.fillStyle = c.strokeStyle = GHOST;
+    for (const sg of SEG) if (sg.scr === s) sg.draw(c);
+    ghostLayers[s] = off;
+  }
+}
+
+function render(active, extra) {
+  for (let s = 0; s < 2; s++) {
+    const c = ctxs[s];
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.drawImage(ghostLayers[s], 0, 0);
+    c.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
+    // soft LCD drop shadow, then the dark segments
+    for (const pass of [0, 1]) {
+      c.save();
+      if (!pass) { c.translate(1.4, 1.6); c.fillStyle = c.strokeStyle = 'rgba(40,44,30,.16)'; }
+      else c.fillStyle = c.strokeStyle = INK;
+      for (const sg of SEG) if (sg.scr === s && active.has(sg.id)) sg.draw(c);
+      if (extra) extra(c, s);
+      c.restore();
+    }
+  }
+}
+
+/* ---------- sound (piezo-style beeps) ---------- */
+let AC = null, muted = false;
+try { muted = localStorage.getItem('dk-muted') === '1'; } catch (e) {}
+function audio() {
+  if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } }
+  if (AC.state === 'suspended') AC.resume();
+  return AC;
+}
+function tone(freq, dur, when = 0, vol = 0.07) {
+  if (muted) return; const a = audio(); if (!a) return;
+  const t = a.currentTime + when, o = a.createOscillator(), g = a.createGain();
+  o.type = 'square'; o.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(vol, t); g.gain.setValueAtTime(0, t + dur);
+  o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + 0.02);
+}
+const SFX = {
+  step: () => tone(1900, 0.025, 0, 0.04),
+  tick: () => tone(950, 0.012, 0, 0.02),
+  jump: () => tone(1500, 0.04, 0, 0.05),
+  score: () => { tone(2600, 0.05); tone(3100, 0.05, 0.06); },
+  lever: () => { tone(1200, 0.04); tone(900, 0.04, 0.05); },
+  grab: () => [1300, 1700, 2100, 2600].forEach((f, i) => tone(f, 0.06, i * 0.07)),
+  miss: () => { for (let i = 0; i < 4; i++) { tone(420, 0.14, i * 0.26, 0.08); tone(330, 0.08, i * 0.26 + 0.14, 0.08); } },
+  fall: () => { for (let i = 0; i < 12; i++) tone(2400 - i * 160, 0.07, i * 0.08, 0.06); },
+  chance: () => [2000, 2500, 3000, 2500, 3000].forEach((f, i) => tone(f, 0.07, i * 0.09)),
+  over: () => [700, 600, 500, 400, 300].forEach((f, i) => tone(f, 0.16, i * 0.18, 0.08)),
+};
+
+/* ---------- game state ---------- */
+const G = {
+  mode: 'clock',          // 'clock' (attract/time), 'play', 'over'
+  game: 'A', score: 0, misses: 0, level: 0, chance: false, passed300: false,
+  m: { k: 'g', row: 0, x: 0 }, air: 0, leap: 0,
+  barrels: [], dk: 0, sinceSpawn: 0,
+  crane: 0, craneSeq: [], lever: 0,
+  ig: 0, igDir: 1, igT: 0,
+  wires: 4, anim: null, attemptT0: 0, lastTick: 0, hi: 0,
+};
+try { G.hi = +localStorage.getItem('dk-hi') || 0; } catch (e) {}
+
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const now = () => performance.now();
+
+function tickMs() {
+  if (G.mode !== 'play') return 480;
+  const base = G.game === 'A' ? 560 : 440, floor = G.game === 'A' ? 330 : 270;
+  let t = Math.max(floor, base - G.level * 35);
+  // dawdle on the way to the crane and the barrels speed up (as on the original)
+  const el = (now() - G.attemptT0) / 1000;
+  if (el > 30) t -= (el - 30) * 6;
+  return Math.max(150, t);
+}
+const maxBarrels = () => Math.min(G.game === 'A' ? 6 : 7, (G.game === 'A' ? 3 : 4) + G.level);
+const minGap = () => (G.game === 'A' ? 3 : 2);
+const spawnP = () => (G.game === 'A' ? 0.4 : 0.55);
+
+function onGround() { return G.m.k === 'g'; }
+function marioAt(n) { return n.row !== undefined && onGround() && G.m.row === n.row && G.m.x === n.gx; }
+function igOver(x) { return x === IG_X[G.ig]; }
+
+function addScore(pts) {
+  if (G.chance) pts *= 2;
+  const before = G.score;
+  G.score = (G.score + pts) % 1000;          // the LCD only has three digits for the score
+  if (!G.passed300 && before < 300 && before + pts >= 300) {
+    G.passed300 = true;
+    if (G.misses === 0) G.chance = true; else G.misses = 0;
+    SFX.chance();
+  }
+}
+
+function resetMario() {
+  G.m = { k: 'g', row: 0, x: 0 }; G.air = 0; G.leap = 0;
+  G.barrels = []; G.dk = 0; G.sinceSpawn = 0;
+  G.crane = 0; G.craneSeq = []; G.lever = 0;
+  G.attemptT0 = now(); G.lastTick = now();
+}
+
+function startGame(type) {
+  Object.assign(G, { mode: 'play', game: type, score: 0, misses: 0, level: 0, chance: false, passed300: false, wires: 4, anim: null });
+  resetMario();
+  SFX.grab();
+}
+
+function marioPos() {
+  const m = G.m;
+  if (m.k === 'l') return ladderStep(m.i, m.s);
+  return { scr: rowScr(m.row), x: GX(m.x), y: groundY(m.row, m.x) - (G.air ? 17 : 0) };
+}
+
+function miss(at) {
+  G.misses++; G.chance = false;
+  G.anim = { type: 'miss', t0: now(), at: at || marioPos() };
+  G.air = 0; G.leap = 0;
+  SFX.miss();
+}
+
+function grab() {
+  G.leap = 0;
+  G.anim = { type: 'grab', t0: now(), cut: false };
+  G.craneSeq = []; G.crane = 2;
+  SFX.grab();
+}
+
+function gameOver() {
+  G.mode = 'over'; G.anim = null;
+  if (G.score > G.hi) { G.hi = G.score; try { localStorage.setItem('dk-hi', String(G.hi)); } catch (e) {} }
+  SFX.over();
+}
+
+/* ---------- input ---------- */
+function move(dir) {
+  if (G.mode !== 'play' || G.anim || G.air || G.leap) return;
+  const m = G.m;
+  if (m.k === 'g') {
+    if (dir === 'L' && m.x > 0) { m.x--; moved(); }
+    else if (dir === 'R' && m.x < rowMax(m.row)) { m.x++; moved(); }
+    else if (dir === 'U') {
+      const i = LADDERS.findIndex(L => L.lo === m.row && L.x === m.x);
+      if (i >= 0) { G.m = { k: 'l', i, s: 1 }; moved(); }
+      else if (m.row === 4 && m.x === SWITCH_X) pullLever();
+    } else if (dir === 'D') {
+      const i = LADDERS.findIndex(L => L.hi === m.row && L.x === m.x);
+      if (i >= 0) { G.m = { k: 'l', i, s: 2 }; moved(); }
+    }
+  } else {
+    const L = LADDERS[m.i];
+    if (dir === 'U') { if (m.s === 1) m.s = 2; else G.m = { k: 'g', row: L.hi, x: L.x }; moved(); }
+    else if (dir === 'D') { if (m.s === 2) m.s = 1; else G.m = { k: 'g', row: L.lo, x: L.x }; moved(); }
+  }
+}
+function moved() {
+  SFX.step();
+  if (onGround() && G.barrels.some(b => marioAt(PATH[b.i]))) miss();
+}
+function pullLever() {
+  if (G.craneSeq.length) return;
+  G.lever = 1;
+  G.craneSeq = [1, 2, 1, 0, 1, 2, 1, 0];       // swings over twice, then stops
+  SFX.lever();
+}
+function jump() {
+  if (G.mode !== 'play' || G.anim || G.air || G.leap) return;
+  const m = G.m;
+  if (m.k !== 'g') return;
+  if (m.row === 4 && m.x === EDGE_X) {        // leap for the crane hook
+    G.leap = now() + 260; SFX.jump();
+    if (G.crane === 2) grab();
+    return;
+  }
+  G.air = now() + clamp(tickMs() * 1.7, 380, 900);
+  SFX.jump();
+  if (m.row === 1 && igOver(m.x)) miss();      // bonked the sliding girder
+}
+
+function press(k) {
+  audio();
+  if (k === 'A' || k === 'B') return startGame(k);
+  if (k === 'T') { G.mode = 'clock'; G.anim = null; G.barrels = []; G.m = { k: 'g', row: 0, x: 2 }; return; }
+  if (k === 'M') {
+    muted = !muted; document.getElementById('mute').classList.toggle('off', muted);
+    try { localStorage.setItem('dk-muted', muted ? '1' : '0'); } catch (e) {}
+    return;
+  }
+  if (k === 'J') return jump();
+  move(k);
+}
+
+// Touch buttons with hold-to-repeat on the D-pad.
+const held = new Map();
+document.querySelectorAll('button[data-k]').forEach(btn => {
+  const k = btn.dataset.k;
+  const down = e => {
+    e.preventDefault();
+    btn.classList.add('down');
+    if (held.has(btn)) return;
+    press(k);
+    if ('UDLR'.includes(k)) {
+      const t = setTimeout(function rep() { press(k); held.set(btn, setTimeout(rep, 170)); }, 300);
+      held.set(btn, t);
+    } else held.set(btn, 0);
+  };
+  const up = e => {
+    e.preventDefault();
+    btn.classList.remove('down');
+    clearTimeout(held.get(btn)); held.delete(btn);
+  };
+  btn.addEventListener('pointerdown', down);
+  btn.addEventListener('pointerup', up);
+  btn.addEventListener('pointercancel', up);
+  btn.addEventListener('pointerleave', up);
+  btn.addEventListener('contextmenu', e => e.preventDefault());
+});
+document.getElementById('mute').classList.toggle('off', muted);
+const KEYS = { ArrowLeft: 'L', ArrowRight: 'R', ArrowUp: 'U', ArrowDown: 'D', ' ': 'J', z: 'J', x: 'J', Z: 'J', X: 'J', '1': 'A', '2': 'B', t: 'T', T: 'T', m: 'M', M: 'M' };
+addEventListener('keydown', e => {
+  const k = KEYS[e.key]; if (!k) return;
+  e.preventDefault();
+  if (e.repeat && !'UDLR'.includes(k)) return;
+  press(k);
+});
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('dblclick', e => e.preventDefault());
+
+/* ---------- the clock tick ---------- */
+function doTick() {
+  const demo = G.mode !== 'play';
+  // barrels roll one position
+  for (const b of G.barrels) { b.i++; b.jumped = false; }
+  G.barrels = G.barrels.filter(b => b.i < PATH.length);
+  if (G.barrels.length) SFX.tick();
+  if (!demo) {
+    for (const b of G.barrels) {
+      const n = PATH[b.i];
+      if (!marioAt(n)) continue;
+      if (!G.air) { miss(); return; }
+      b.jumped = true;
+      addScore(n.row >= 3 ? 2 : 1); SFX.score();   // 1 point below, 2 up top
+    }
+  }
+  // Donkey Kong: raise a barrel, then throw it
+  if (G.mode !== 'over') {
+    if (G.dk === 2) G.dk = 0;
+    else if (G.dk === 1) { G.dk = 2; G.barrels.push({ i: 0 }); G.sinceSpawn = 0; }
+    else {
+      G.sinceSpawn++;
+      if (G.barrels.length < maxBarrels() && G.sinceSpawn >= minGap() && Math.random() < spawnP()) G.dk = 1;
+    }
+  }
+  // crane swing
+  if (G.craneSeq.length) { G.crane = G.craneSeq.shift(); if (!G.craneSeq.length) G.lever = 0; }
+  // sliding girder
+  if (++G.igT % 2 === 0) {
+    G.ig += G.igDir;
+    if (G.ig === IG_X.length - 1 || G.ig === 0) G.igDir *= -1;
+    if (!demo && G.air && onGround() && G.m.row === 1 && igOver(G.m.x)) miss();
+  }
+  // attract mode: a demo Mario hops the barrels on the bottom floor
+  if (G.mode === 'clock' && !G.air && G.barrels.some(b => { const n = PATH[b.i + 1]; return n && n.row === 0 && n.gx === G.m.x; }))
+    G.air = now() + 800;
+}
+
+function update() {
+  const t = now();
+  if (G.anim) return updateAnim(t);
+  if (G.mode === 'over') return;
+  if (G.air && t >= G.air) {
+    const under = G.barrels.filter(b => marioAt(PATH[b.i]));
+    // hang in the air until a barrel we're clearing has rolled on
+    if (under.length && under.every(b => b.jumped)) G.air = G.lastTick + tickMs() + 1;
+    else {
+      G.air = 0;
+      if (G.mode === 'play' && under.length) return miss();
+    }
+  }
+  if (G.leap) {
+    if (G.crane === 2) return grab();
+    if (t >= G.leap) { G.leap = 0; return miss({ scr: TOP, x: 222, y: 224 }); }
+  }
+  if (t - G.lastTick >= tickMs()) { G.lastTick = t; doTick(); }
+}
+
+function updateAnim(t) {
+  const a = G.anim, e = t - a.t0;
+  if (a.type === 'miss') {
+    if (e > 2000) {
+      G.anim = null;
+      if (G.misses >= 3) gameOver(); else resetMario();
+    }
+  } else if (a.type === 'grab') {
+    G.crane = e < 450 ? 2 : e < 900 ? 1 : 0;
+    if (e > 1100 && !a.cut) {
+      a.cut = true; G.wires--;
+      const el = (t - G.attemptT0) / 1000;
+      addScore(el <= 20 ? 20 : el <= 30 ? 15 : el <= 40 ? 10 : 5);
+      SFX.score();
+    }
+    if (e > 1700) {
+      if (G.wires <= 0) { G.anim = { type: 'dkfall', t0: t }; SFX.fall(); }
+      else { G.anim = null; resetMario(); }
+    }
+  } else if (a.type === 'dkfall') {
+    if (e > 3200) {
+      addScore(20);
+      G.wires = 4; G.level++; G.anim = null; resetMario();
+    }
+  }
+}
+
+/* ---------- what's lit this frame ---------- */
+function activeSet() {
+  const A = new Set(), t = now(), blink = Math.floor(t / 250) % 2 === 0;
+  const a = G.anim;
+
+  // Mario
+  const showMario = G.mode !== 'over' && !(a && a.type === 'miss');
+  if (showMario) {
+    if (a && a.type === 'grab') A.add('mh' + G.crane);
+    else if (a && a.type === 'dkfall') { /* Mario's off taking a bow */ }
+    else if (G.leap) A.add('mleap');
+    else if (G.m.k === 'l') A.add(`ml${G.m.i}_${G.m.s}`);
+    else A.add((G.air ? 'mj' : 'mg') + `${G.m.row}_${G.m.x}`);
+  }
+  for (const b of G.barrels) A.add('b' + b.i);
+
+  // Donkey Kong, his platform and wires
+  if (a && a.type === 'dkfall') {
+    const e = t - a.t0;
+    A.add(e < 700 ? 'dkFall1' : 'dkFall2');
+    if (blink) A.add('heart');
+    A.add('pauW');
+  } else {
+    A.add(G.dk === 1 ? 'dkUp' : G.dk === 2 ? 'dkThrow' : 'dkIdle');
+    A.add('plat');
+    const cutBlink = a && a.type === 'grab' && a.cut && blink;
+    for (let k = 0; k < 4; k++) if (k >= 4 - G.wires) A.add('w' + k);
+    if (cutBlink) A.add('w' + (3 - G.wires));
+    A.add(blink && G.mode === 'play' ? 'pauW' : 'pau');
+    if (G.mode === 'play' && Math.floor(t / 600) % 3 === 0) A.add('help');
+  }
+
+  A.add('hk' + G.crane);
+  A.add('lev' + G.lever);
+  A.add('ig' + G.ig);
+
+  // labels & digits
+  if (G.mode !== 'clock') {
+    A.add(G.game === 'A' ? 'gameA' : 'gameB');
+    if (G.misses > 0) { A.add('missL'); for (let k = 0; k < G.misses && k < 3; k++) A.add('miss' + k); }
+    const showScore = !(G.chance && !blink && G.mode === 'play');
+    if (showScore) digits(String(G.score).padStart(4, ' '), A);
+  } else {
+    const d = new Date(); let h = d.getHours(); const pm = h >= 12; h = h % 12 || 12;
+    digits(String(h).padStart(2, ' ') + String(d.getMinutes()).padStart(2, '0'), A);
+    if (d.getMilliseconds() < 500) A.add('colon');
+    A.add(pm ? 'pm' : 'am');
+  }
+  return A;
+}
+function digits(str, A) {
+  [...str].forEach((ch, d) => { if (ch !== ' ') for (const s of DIGITS[+ch]) A.add(`d${d}${s}`); });
+}
+function extraDraw(c, s) {
+  const a = G.anim;
+  if (a && a.type === 'miss' && a.at.scr === s && Math.floor((now() - a.t0) / 200) % 2 === 0)
+    drawBmp(c, S.marioCrash, a.at.x, a.at.y);
+  if (G.mode === 'over' && s === BOT) {
+    c.font = 'bold 11px Helvetica, Arial';
+    c.fillText('GAME OVER', 116, 128);
+    c.font = 'bold 8px Helvetica, Arial';
+    c.fillText('HI ' + String(G.hi).padStart(3, '0') + '  ·  PRESS GAME A / B', 92, 142);
+  }
+}
+
+/* ---------- layout ---------- */
+function layout() {
+  const vw = innerWidth, vh = innerHeight, land = vw > vh * 1.1;
+  document.body.classList.toggle('land', land);
+  const root = document.documentElement.style, dev = document.getElementById('device');
+  // Measure everything that isn't screen, then give the screens whatever room is left.
+  let sw = 200;
+  root.setProperty('--sw', sw + 'px');
+  if (land) {
+    const extraH = dev.offsetHeight - 2 * sw * 0.75;
+    sw = Math.min((vh - extraH - 8) / 1.5, vw - 2 * 200);
+  } else {
+    const extraH = dev.offsetHeight - 2 * sw * 0.75;
+    sw = Math.min(vw - 52, (vh - extraH - 8) / 1.5);
+  }
+  sw = Math.max(150, Math.floor(sw));
+  root.setProperty('--sw', sw + 'px');
+  dpr = Math.min(3, window.devicePixelRatio || 1);
+  scale = sw / W;
+  for (const cv of canvases) { cv.width = Math.round(sw * dpr); cv.height = Math.round(sw * 0.75 * dpr); }
+  buildGhosts();
+}
+addEventListener('resize', layout);
+addEventListener('orientationchange', () => setTimeout(layout, 200));
+layout();
+
+function frame() {
+  update();
+  render(activeSet(), extraDraw);
+  requestAnimationFrame(frame);
+}
+G.m = { k: 'g', row: 0, x: 2 };
+requestAnimationFrame(frame);
+
+// Offline support when installed to the Home Screen.
+if ('serviceWorker' in navigator && location.protocol === 'https:' && window.top === window) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+window.__dk = { G, press, PATH, LADDERS };   // handy for testing
+</script>
+</body>
+</html>
