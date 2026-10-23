@@ -25,6 +25,7 @@
     --btn: #2a2420;
     --btn-hi: #4a403a;
     --ink: #2b1a0f;
+    color-scheme: dark;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
@@ -994,7 +995,11 @@ function extraDraw(c, s) {
 
 /* ---------- layout ---------- */
 function layout() {
-  const vw = innerWidth, vh = innerHeight, land = vw > vh * 1.1;
+  // room inside the body's safe-area padding
+  const bs = getComputedStyle(document.body);
+  const vw = document.body.clientWidth - parseFloat(bs.paddingLeft) - parseFloat(bs.paddingRight);
+  const vh = document.body.clientHeight - parseFloat(bs.paddingTop) - parseFloat(bs.paddingBottom);
+  const land = vw > vh * 1.1;
   document.body.classList.toggle('land', land);
   const root = document.documentElement.style, dev = document.getElementById('device');
   // Measure everything that isn't screen, then give the screens whatever room is left.
