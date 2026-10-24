@@ -1,0 +1,734 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Oil Panic Multi Screen</title>
+<meta name="description" content="A fan-made tribute to the 1982 Oil Panic multi screen LCD handheld, built for iPhone.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Oil Panic">
+<meta name="theme-color" content="#14120c">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<style>
+  :root {
+    --sw: 300px;
+    --bg: #14120c;
+    --shell-hi: #ecc04a;
+    --shell-lo: #bf8a1c;
+    --face-hi: #5a3424;
+    --face: #43261a;
+    --face-edge: #2a170f;
+    --bezel: #1d1915;
+    --btn: #2a2420;
+    --btn-hi: #4a403a;
+    --label: #f2dfae;
+    --ink: #3a2410;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%; background: var(--bg); color: var(--label);
+    font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    overflow: hidden; overscroll-behavior: none; touch-action: none;
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  }
+  body {
+    display: flex; align-items: center; justify-content: center;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  #device { display: flex; flex-direction: column; align-items: center; }
+  .stack { display: flex; flex-direction: column; align-items: stretch; }
+
+  .shell {
+    background: linear-gradient(160deg, var(--shell-hi), var(--shell-lo));
+    border-radius: 14px; padding: 10px 12px;
+    box-shadow: inset 0 2px 0 rgba(255,255,255,.3), inset 0 -3px 0 rgba(0,0,0,.25), 0 8px 24px rgba(0,0,0,.5);
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .face {
+    background: linear-gradient(180deg, var(--face-hi), var(--face));
+    border-radius: 8px; padding: 8px 10px 6px;
+    box-shadow: inset 0 0 0 2px var(--face-edge);
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .bezel {
+    background: var(--bezel); padding: 7px; border-radius: 5px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,.8);
+  }
+  canvas { display: block; width: var(--sw); height: calc(var(--sw) * 0.75); border-radius: 2px; }
+  .title {
+    color: var(--label); font-weight: 900; letter-spacing: .16em; font-size: 15px;
+    margin-top: 5px; text-transform: uppercase;
+  }
+  .title small { font-weight: 700; letter-spacing: .2em; font-size: 9px; margin-left: 6px; opacity: .75; }
+  .hinge {
+    height: 12px; margin: -2px 16px; z-index: 1;
+    background: linear-gradient(180deg, #6b4a10, #2f2006 45%, #6b4a10);
+    border-radius: 3px;
+  }
+
+  .controls {
+    width: max(calc(var(--sw) + 20px), 296px); display: grid;
+    grid-template-columns: 1fr auto 1fr; align-items: center; margin-top: 12px; gap: 6px;
+  }
+  button {
+    font: inherit; color: #e8dcc0; border: 0; background: var(--btn); padding: 0;
+    box-shadow: 0 3px 0 #0e0b09, inset 0 1px 0 var(--btn-hi);
+    touch-action: none; cursor: pointer;
+  }
+  .pad { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .pad.l { justify-self: start; }
+  .pad.r { justify-self: end; }
+  .big {
+    width: 88px; height: 88px; border-radius: 50%; position: relative;
+    background: radial-gradient(circle at 40% 35%, #4a3f39, var(--btn) 70%);
+    box-shadow: 0 4px 0 #0e0b09, 0 0 0 5px rgba(0,0,0,.14);
+  }
+  .big::after {
+    content: ""; position: absolute; left: 50%; top: 50%; width: 0; height: 0;
+    border: 13px solid transparent; transform: translate(-50%, -50%);
+  }
+  .big.left::after { border-right-color: #8d8278; margin-left: -7px; }
+  .big.right::after { border-left-color: #8d8278; margin-left: 7px; }
+  .big.down, .big:active { transform: translateY(2px); box-shadow: 0 1px 0 #0e0b09, 0 0 0 5px rgba(0,0,0,.14); }
+  .lbl { color: var(--ink); font-size: 9px; font-weight: 800; letter-spacing: .12em; }
+
+  .meta { display: flex; flex-direction: column; gap: 9px; align-items: center; }
+  .meta button {
+    width: 62px; height: 20px; border-radius: 10px; font-size: 9px; font-weight: 800;
+    letter-spacing: .08em; color: var(--label); background: #5a3424;
+    box-shadow: 0 2px 0 #2a170f, inset 0 1px 0 #7d5340;
+  }
+  .meta button.down, .meta button:active { transform: translateY(2px); box-shadow: 0 0 0 #2a170f, inset 0 1px 0 #7d5340; }
+  .meta .mute.off { opacity: .55; }
+  .credit { color: #7b6a55; font-size: 9px; margin-top: 8px; text-align: center; }
+
+  /* Landscape: screens in the middle, LEFT on the left, RIGHT on the right. */
+  body.land .controls { display: block; width: 0; height: 0; margin: 0; }
+  body.land .pad.l { position: fixed; left: calc(env(safe-area-inset-left) + 26px); top: 50%; transform: translateY(-50%); }
+  body.land .meta { position: fixed; right: calc(env(safe-area-inset-right) + 22px); top: calc(env(safe-area-inset-top) + 18px); }
+  body.land .pad.r { position: fixed; right: calc(env(safe-area-inset-right) + 22px); bottom: calc(env(safe-area-inset-bottom) + 18px); }
+  body.land .credit, body.land .lbl { display: none; }
+  body.land .title { font-size: 12px; margin-top: 3px; }
+  body.land .shell { padding: 6px 10px; }
+  body.land .face { padding: 6px 8px 4px; }
+</style>
+</head>
+<body>
+<div id="device">
+  <div class="stack">
+    <div class="shell">
+      <div class="face">
+        <div class="bezel"><canvas id="top"></canvas></div>
+        <div class="title">Oil Panic<small>MULTI SCREEN</small></div>
+      </div>
+    </div>
+    <div class="hinge"></div>
+    <div class="shell">
+      <div class="face">
+        <div class="bezel"><canvas id="bot"></canvas></div>
+      </div>
+      <div class="controls">
+        <div class="pad l">
+          <button class="big left" data-k="L" aria-label="Left"></button>
+          <div class="lbl">LEFT</div>
+        </div>
+        <div class="meta">
+          <button data-k="A">GAME A</button>
+          <button data-k="B">GAME B</button>
+          <button data-k="T">TIME</button>
+          <button class="mute" data-k="M" id="mute">SOUND</button>
+        </div>
+        <div class="pad r">
+          <button class="big right" data-k="R" aria-label="Right"></button>
+          <div class="lbl">RIGHT</div>
+        </div>
+      </div>
+    </div>
+    <div class="credit">Fan-made tribute · not affiliated with Nintendo</div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* ==========================================================================
+   Oil Panic Multi Screen — LCD handheld tribute
+   Top screen: catch oil dripping from a leaky pipe, up to three drops a
+   bucket. Bottom screen: pour it off the balcony into the boss's drum.
+   Every element that can light up is a fixed segment; unlit ones are ghosts.
+   ========================================================================== */
+
+const W = 320, H = 240, P = 2;
+const TOP = 0, BOT = 1;
+
+/* ---------- tiny bitmap toolkit ---------- */
+function bmp(rows) { return { w: Math.max(...rows.map(r => r.length)), h: rows.length, rows }; }
+class Grid {
+  constructor(w, h) { this.w = w; this.h = h; this.c = Array.from({ length: h }, () => Array(w).fill(0)); }
+  rect(x, y, w, h, v = 1) { for (let j = y; j < y + h; j++) for (let i = x; i < x + w; i++) if (j >= 0 && j < this.h && i >= 0 && i < this.w) this.c[j][i] = v; return this; }
+  bmp() { return bmp(this.c.map(r => r.map(v => v ? '#' : '.').join(''))); }
+}
+function drawBmp(ctx, b, cx, by, flip = false) {
+  const x0 = Math.round(cx - b.w * P / 2), y0 = Math.round(by - b.h * P);
+  for (let r = 0; r < b.h; r++) {
+    const row = b.rows[r];
+    let c = 0;
+    while (c < b.w) {
+      if (row[c] !== '#') { c++; continue; }
+      let e = c; while (e < b.w && row[e] === '#') e++;
+      ctx.fillRect(x0 + (flip ? b.w - e : c) * P, y0 + r * P, (e - c) * P, P);
+      c = e;
+    }
+  }
+}
+
+/* ---------- sprites ---------- */
+const S = {};
+// The helper: round head, big nose, arms up holding the bucket overhead.
+function helper(arms) {
+  const g = new Grid(14, 18), o = 1;
+  g.rect(o + 3, 2, 6, 1); g.rect(o + 2, 3, 8, 5); g.rect(o + 3, 8, 6, 1);   // head
+  g.rect(o + 10, 5, 2, 2);                                                  // nose
+  g.rect(o + 7, 4, 1, 1, 0);                                                // eye
+  g.rect(o + 5, 9, 2, 1);                                                   // neck
+  g.rect(o + 3, 10, 6, 5);                                                  // body
+  g.rect(o + 3, 15, 2, 2); g.rect(o + 7, 15, 2, 2);                         // legs
+  g.rect(o + 2, 17, 3, 1); g.rect(o + 7, 17, 3, 1);                         // shoes
+  if (arms === 'up') {
+    g.rect(o + 0, 0, 2, 1); g.rect(o + 1, 1, 1, 9); g.rect(o + 1, 10, 2, 1);
+    g.rect(o + 10, 0, 2, 1); g.rect(o + 10, 1, 1, 3); g.rect(o + 11, 7, 1, 3); g.rect(o + 9, 10, 2, 1);
+  } else {                                                                  // reaching left over the railing
+    g.rect(0, 10, 4, 2); g.rect(o + 9, 11, 1, 4);
+  }
+  return g.bmp();
+}
+S.helper = helper('up');
+S.helperPour = helper('out');
+S.bucket = bmp([
+  "#............#",
+  "#............#",
+  ".#..........#.",
+  ".#..........#.",
+  ".#..........#.",
+  ".#..........#.",
+  "..##########..",
+]);
+S.drop = bmp(["..##..", "..##..", ".####.", "######", "######", ".####."]);
+S.flame = bmp([
+  ".....#......",
+  "....##...#..",
+  "....###..##.",
+  "...####.###.",
+  "..#########.",
+  "..##.######.",
+  ".###..#####.",
+  ".###...####.",
+  "####...####.",
+  "###.....###.",
+  "####...####.",
+  ".#########..",
+]);
+S.boss = (() => {
+  const g = new Grid(16, 20);
+  g.rect(4, 0, 8, 2); g.rect(3, 2, 11, 1);                        // cap and peak
+  g.rect(4, 3, 8, 5); g.rect(12, 5, 2, 2); g.rect(9, 4, 1, 1, 0); // head, nose, eye
+  g.rect(6, 7, 5, 1, 0); g.rect(6, 8, 5, 1);                      // mustache
+  g.rect(3, 9, 10, 6); g.rect(6, 10, 4, 4, 0); g.rect(7, 11, 2, 2); // overalls
+  g.rect(1, 0, 2, 1); g.rect(2, 1, 1, 9); g.rect(13, 0, 2, 1); g.rect(13, 1, 1, 9); // arms up
+  g.rect(4, 15, 3, 3); g.rect(9, 15, 3, 3); g.rect(3, 18, 4, 2); g.rect(9, 18, 4, 2);
+  return g.bmp();
+})();
+S.drum = bmp([
+  "##############",
+  "#............#",
+  "##############",
+  "#............#",
+  "#............#",
+  "##############",
+  "#............#",
+  "##############",
+]);
+S.customer = bmp([
+  "..########..",
+  ".##########.",
+  "..#######...",
+  "..##.#####..",
+  "..#######...",
+  "...#####....",
+  "..#######...",
+  ".#########..",
+  "#.#######.#.",
+  "#.#######.#.",
+  "..#######...",
+  "..###.###...",
+  "..##...##...",
+  "..##...##...",
+  ".###...###..",
+]);
+S.customerMad = bmp([
+  "#.#.#..#.#.#",
+  "..########..",
+  ".##########.",
+  "#.#######..#",
+  "#.##.#####.#",
+  "##.######.##",
+  ".#.#####.#..",
+  ".#########..",
+  "..#######...",
+  "..#######...",
+  "..#######...",
+  "..###.###...",
+  "..##...##...",
+  "..##...##...",
+  ".###...###..",
+]);
+S.head = bmp([".####.", "######", "####.#", "######", ".####.", "..##.."]);
+
+/* ---------- geometry ---------- */
+const HX = [62, 110, 160, 210, 258];        // helper spots: balcony L, under the 3 leaks, balcony R
+const COLS = [1, 2, 3];                     // helper spots that sit under a leak
+const FLOOR = 226;
+const BUCKET_Y = FLOOR - 36;                 // bucket's bottom edge (on the helper's hands)
+const DROP_Y = [40, 80, 120, 160];          // drop stages, top to bottom
+const PIPE_Y = 16;
+const SX = [40, 280];                       // where poured oil falls, left and right
+const BX = [40, 100, 160, 220, 280];        // boss spots on the forecourt
+const CX = [12, 308];                       // customers at the pumps
+
+/* ---------- segments ---------- */
+const SEG = [];
+const seg = (id, scr, draw) => SEG.push({ id, scr, draw });
+
+HX.forEach((x, p) => {
+  if (p === 0 || p === 4) {
+    const flip = p === 4;
+    seg(`h${p}`, TOP, c => drawBmp(c, S.helper, x, FLOOR));
+    seg(`hp${p}`, TOP, c => {
+      drawBmp(c, S.helperPour, x, FLOOR, flip);
+      c.save(); c.translate(flip ? x + 22 : x - 22, FLOOR - 20); c.rotate(flip ? 1.9 : -1.9);
+      drawBmp(c, S.bucket, 0, 7); c.restore();
+    });
+  } else seg(`h${p}`, TOP, c => drawBmp(c, S.helper, x, FLOOR));
+  seg(`bk${p}`, TOP, c => drawBmp(c, S.bucket, x + 1, BUCKET_Y));
+  for (let l = 1; l <= 3; l++)                 // oil level bands inside the bucket
+    seg(`lv${p}_${l}`, TOP, c => c.fillRect(x + 1 - 9, BUCKET_Y - 2 - l * 4, 18, 3));
+});
+COLS.forEach((p, k) => {
+  DROP_Y.forEach((y, s) => seg(`d${k}_${s}`, TOP, c => drawBmp(c, S.drop, HX[p], y)));
+  seg(`f${k}`, TOP, c => drawBmp(c, S.flame, HX[p], FLOOR));
+  seg(`leak${k}`, TOP, c => { c.fillRect(HX[p] - 3, PIPE_Y + 9, 6, 4); });
+});
+[0, 1].forEach(side => {
+  const x = SX[side], dir = side ? 1 : -1;
+  seg(`pt${side}`, TOP, c => wavy(c, x, FLOOR - 16, H));
+  seg(`pb${side}_0`, BOT, c => wavy(c, x, 0, 70));
+  seg(`pb${side}_1`, BOT, c => wavy(c, x, 70, 168));
+  seg(`pb${side}_2`, BOT, c => {
+    wavy(c, x, 168, 214);
+    for (let i = 0; i < 4; i++) c.fillRect(x + dir * (6 + i * 5), 206 - i * 6 + (i % 2) * 3, 3, 3);
+  });
+  seg(`cu${side}`, BOT, c => drawBmp(c, S.customer, CX[side], FLOOR, !side));
+  seg(`cm${side}`, BOT, c => drawBmp(c, S.customerMad, CX[side], FLOOR, !side));
+});
+function wavy(c, x, y1, y2) { for (let y = y1; y < y2; y += 6) c.fillRect(x - 2 + ((y / 6) % 2 ? 1 : -1), y, 4, 5); }
+BX.forEach((x, b) => {
+  seg(`boss${b}`, BOT, c => drawBmp(c, S.boss, x, FLOOR));
+  seg(`drum${b}`, BOT, c => drawBmp(c, S.drum, x, FLOOR - 40));
+});
+// labels, misses, digits
+seg('gameA', BOT, c => { c.font = 'bold 9px Helvetica, Arial'; c.fillText('GAME A', 56, 14); });
+seg('gameB', BOT, c => { c.font = 'bold 9px Helvetica, Arial'; c.fillText('GAME B', 56, 26); });
+seg('missL', BOT, c => { c.font = 'bold 9px Helvetica, Arial'; c.fillText('MISS', 140, 50); });
+for (let k = 0; k < 3; k++) seg(`miss${k}`, BOT, c => drawBmp(c, S.head, 176 + k * 15, 51));
+seg('am', BOT, c => { c.font = 'bold 7px Helvetica, Arial'; c.fillText('AM', 124, 14); });
+seg('pm', BOT, c => { c.font = 'bold 7px Helvetica, Arial'; c.fillText('PM', 124, 26); });
+const DIG = { x: 142, y: 6, w: 13, h: 24, gap: 21 };
+const SEGS7 = 'abcdefg';
+for (let d = 0; d < 4; d++) for (const s of SEGS7) seg(`d${d}${s}`, BOT, c => seg7(c, d, s));
+seg('colon', BOT, c => { const x = DIG.x + DIG.gap * 2 - 5; c.fillRect(x, DIG.y + 7, 3, 3); c.fillRect(x, DIG.y + 15, 3, 3); });
+function seg7(c, d, s) {
+  const x0 = DIG.x + d * DIG.gap + (d >= 2 ? 4 : 0), y0 = DIG.y, w = DIG.w, h = DIG.h / 2, t = 3;
+  if (s === 'a' || s === 'd' || s === 'g') {
+    const y = y0 + (s === 'a' ? 0 : s === 'g' ? h - t / 2 : 2 * h - t);
+    c.beginPath(); c.moveTo(x0 + 1, y + t / 2); c.lineTo(x0 + t, y); c.lineTo(x0 + w - t, y); c.lineTo(x0 + w - 1, y + t / 2);
+    c.lineTo(x0 + w - t, y + t); c.lineTo(x0 + t, y + t); c.closePath(); c.fill();
+  } else {
+    const x = (s === 'b' || s === 'c') ? x0 + w - t : x0;
+    const y = y0 + ((s === 'b' || s === 'f') ? 0 : h);
+    c.beginPath(); c.moveTo(x + t / 2, y + 1); c.lineTo(x + t, y + t); c.lineTo(x + t, y + h - t / 2);
+    c.lineTo(x + t / 2, y + h); c.lineTo(x, y + h - t / 2); c.lineTo(x, y + t); c.closePath(); c.fill();
+  }
+}
+const DIGITS = ['abcdef', 'bc', 'abdeg', 'abcdg', 'bcfg', 'acdfg', 'acdefg', 'abc', 'abcdefg', 'abcdfg'];
+
+/* ---------- printed background ---------- */
+function printBackground(c, scr) {
+  const g = c.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, '#d6d8c3'); g.addColorStop(1, '#c3c7af');
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  const brown = 'rgba(132, 84, 46, .55)', gray = 'rgba(70, 78, 84, .5)', red = 'rgba(178, 66, 48, .55)', blue = 'rgba(52, 104, 140, .45)';
+  c.lineWidth = 1.6;
+  if (scr === TOP) {
+    // walls, floor and the two balcony doorways
+    c.strokeStyle = brown;
+    c.beginPath(); c.moveTo(0, FLOOR + 1); c.lineTo(W, FLOOR + 1); c.stroke();
+    for (const x0 of [0, 290]) {
+      c.strokeRect(x0 + 2, 60, 28, FLOOR - 60);
+      for (let y = FLOOR - 26; y < FLOOR; y += 6) { c.beginPath(); c.moveTo(x0 + 2, y); c.lineTo(x0 + 30, y); c.stroke(); }
+    }
+    c.beginPath(); c.moveTo(86, FLOOR); c.lineTo(86, 40); c.moveTo(234, FLOOR); c.lineTo(234, 40); c.stroke();
+    // the leaky pipe
+    c.strokeStyle = gray; c.lineWidth = 2;
+    c.beginPath(); c.moveTo(34, PIPE_Y); c.lineTo(286, PIPE_Y); c.moveTo(34, PIPE_Y + 9); c.lineTo(286, PIPE_Y + 9); c.stroke();
+    for (const p of COLS) c.strokeRect(HX[p] - 6, PIPE_Y - 3, 12, 15);
+    c.strokeRect(20, PIPE_Y - 6, 14, 22); c.strokeRect(286, PIPE_Y - 6, 14, 22);
+    // what's at risk if a drop lands: a stove, an ashtray and another stove
+    c.strokeStyle = red; c.lineWidth = 1.4;
+    for (const p of [1, 3]) {
+      const x = HX[p];
+      c.strokeRect(x - 13, FLOOR - 12, 26, 12);
+      c.beginPath(); c.moveTo(x - 9, FLOOR - 14); c.lineTo(x - 5, FLOOR - 14); c.moveTo(x + 5, FLOOR - 14); c.lineTo(x + 9, FLOOR - 14); c.stroke();
+    }
+    c.beginPath(); c.ellipse(HX[2], FLOOR - 3, 11, 3, 0, 0, Math.PI * 2); c.stroke();
+    c.beginPath(); c.moveTo(HX[2] + 4, FLOOR - 5); c.quadraticCurveTo(HX[2] + 10, FLOOR - 14, HX[2] + 4, FLOOR - 22); c.stroke();
+  } else {
+    // forecourt: balcony overhang, sign, pumps, two cars
+    c.strokeStyle = brown;
+    c.beginPath(); c.moveTo(0, FLOOR + 1); c.lineTo(W, FLOOR + 1); c.stroke();
+    c.strokeRect(60, 64, 200, 6);
+    c.font = 'bold 12px Helvetica, Arial'; c.fillStyle = brown; c.fillText('GAS', 147, 92);
+    c.strokeStyle = blue;
+    for (const x of [118, 202]) {
+      c.strokeRect(x - 8, FLOOR - 34, 16, 34); c.strokeRect(x - 5, FLOOR - 30, 10, 8);
+      c.beginPath(); c.moveTo(x + 8, FLOOR - 24); c.quadraticCurveTo(x + 16, FLOOR - 16, x + 12, FLOOR - 6); c.stroke();
+    }
+    c.strokeStyle = gray;
+    for (const [x, d] of [[0, 1], [W, -1]]) {
+      c.beginPath();
+      c.moveTo(x, FLOOR - 10); c.lineTo(x + d * 54, FLOOR - 10); c.lineTo(x + d * 58, FLOOR - 22);
+      c.lineTo(x + d * 44, FLOOR - 24); c.lineTo(x + d * 34, FLOOR - 40); c.lineTo(x, FLOOR - 40);
+      c.stroke();
+      c.beginPath(); c.arc(x + d * 42, FLOOR - 6, 6, 0, Math.PI * 2); c.stroke();
+    }
+  }
+}
+
+/* ---------- rendering ---------- */
+const canvases = [document.getElementById('top'), document.getElementById('bot')];
+const ctxs = canvases.map(cv => cv.getContext('2d'));
+const ghostLayers = [];
+const INK = '#1c1d17', GHOST = 'rgba(30, 32, 24, 0.075)';
+let scale = 1, dpr = 1;
+
+function buildGhosts() {
+  for (let s = 0; s < 2; s++) {
+    const off = document.createElement('canvas');
+    off.width = canvases[s].width; off.height = canvases[s].height;
+    const c = off.getContext('2d');
+    c.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
+    printBackground(c, s);
+    c.fillStyle = c.strokeStyle = GHOST;
+    for (const sg of SEG) if (sg.scr === s) sg.draw(c);
+    ghostLayers[s] = off;
+  }
+}
+function render(active) {
+  for (let s = 0; s < 2; s++) {
+    const c = ctxs[s];
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.drawImage(ghostLayers[s], 0, 0);
+    c.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
+    for (const pass of [0, 1]) {
+      c.save();
+      if (!pass) { c.translate(1.4, 1.6); c.fillStyle = c.strokeStyle = 'rgba(40,44,30,.16)'; }
+      else c.fillStyle = c.strokeStyle = INK;
+      for (const sg of SEG) if (sg.scr === s && active.has(sg.id)) sg.draw(c);
+      if (s === BOT && G.mode === 'over') {
+        c.font = 'bold 11px Helvetica, Arial'; c.fillText('GAME OVER', 128, 130);
+        c.font = 'bold 8px Helvetica, Arial'; c.fillText('HI ' + String(G.hi).padStart(3, '0') + '  ·  PRESS GAME A / B', 102, 144);
+      }
+      c.restore();
+    }
+  }
+}
+
+/* ---------- sound ---------- */
+let AC = null, muted = false;
+try { muted = localStorage.getItem('op-muted') === '1'; } catch (e) {}
+function audio() {
+  if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } }
+  if (AC.state === 'suspended') AC.resume();
+  return AC;
+}
+function tone(freq, dur, when = 0, vol = 0.07) {
+  if (muted) return; const a = audio(); if (!a) return;
+  const t = a.currentTime + when, o = a.createOscillator(), g = a.createGain();
+  o.type = 'square'; o.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(vol, t); g.gain.setValueAtTime(0, t + dur);
+  o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + 0.02);
+}
+const SFX = {
+  step: () => tone(1900, 0.025, 0, 0.04),
+  tick: () => tone(900, 0.012, 0, 0.02),
+  catch: () => tone(2600, 0.05),
+  pour: () => { tone(1400, 0.05); tone(1100, 0.05, 0.06); },
+  drum: n => { for (let i = 0; i < n; i++) tone(2200 + i * 400, 0.06, i * 0.08); },
+  miss: () => { for (let i = 0; i < 4; i++) { tone(420, 0.14, i * 0.26, 0.08); tone(330, 0.08, i * 0.26 + 0.14, 0.08); } },
+  chance: () => [2000, 2500, 3000, 2500, 3000].forEach((f, i) => tone(f, 0.07, i * 0.09)),
+  start: () => [1300, 1700, 2100, 2600].forEach((f, i) => tone(f, 0.06, i * 0.07)),
+  over: () => [700, 600, 500, 400, 300].forEach((f, i) => tone(f, 0.16, i * 0.18, 0.08)),
+};
+
+/* ---------- game state ---------- */
+const G = {
+  mode: 'clock', game: 'A', score: 0, misses: 0, chance: false, passed300: false,
+  p: 2, lv: 0, drops: [], pour: null,
+  boss: 2, bossDir: 1, bossWait: 0,
+  anim: null, lastTick: 0, hi: 0,
+};
+try { G.hi = +localStorage.getItem('op-hi') || 0; } catch (e) {}
+const now = () => performance.now();
+
+function tickMs() {
+  if (G.mode !== 'play') return 520;
+  const base = G.game === 'A' ? 640 : 520, floor = G.game === 'A' ? 330 : 260;
+  return Math.max(floor, base - Math.floor(G.score / 50) * 22);
+}
+const maxDrops = () => Math.min(3, (G.game === 'A' ? 1 : 2) + Math.floor(G.score / 80));
+const spawnP = () => (G.game === 'A' ? 0.35 : 0.5);
+const POUR_PTS = [0, 1, 2, 5];               // a full bucket pays the most
+
+function addScore(pts) {
+  if (G.chance) pts *= 2;
+  const before = G.score;
+  G.score = (G.score + pts) % 1000;
+  if (!G.passed300 && before < 300 && before + pts >= 300) {
+    G.passed300 = true;
+    if (G.misses === 0) G.chance = true; else G.misses = 0;
+    SFX.chance();
+  }
+}
+
+function startGame(type) {
+  Object.assign(G, {
+    mode: 'play', game: type, score: 0, misses: 0, chance: false, passed300: false,
+    p: 2, lv: 0, drops: [], pour: null, boss: 2, bossDir: 1, bossWait: 0, anim: null, lastTick: now(),
+  });
+  SFX.start();
+}
+
+function miss(kind, where) {
+  G.misses++; G.chance = false;
+  G.anim = { type: 'miss', kind, where, t0: now() };
+  SFX.miss();
+}
+
+function gameOver() {
+  G.mode = 'over'; G.anim = null;
+  if (G.score > G.hi) { G.hi = G.score; try { localStorage.setItem('op-hi', String(G.hi)); } catch (e) {} }
+  SFX.over();
+}
+
+/* ---------- input ---------- */
+function move(dir) {
+  if (G.mode !== 'play' || G.anim) return;
+  const np = G.p + (dir === 'L' ? -1 : 1);
+  if (np < 0 || np > 4) return;
+  G.p = np; SFX.step();
+  tryPour();
+}
+// Stepping out onto a balcony with oil tips the bucket over the railing.
+function tryPour() {
+  if ((G.p === 0 || G.p === 4) && G.lv > 0 && !G.pour) {
+    G.pour = { side: G.p === 0 ? 0 : 1, stage: 0, amount: G.lv };
+    G.lv = 0; SFX.pour();
+  }
+}
+
+function press(k) {
+  audio();
+  if (k === 'A' || k === 'B') return startGame(k);
+  if (k === 'T') { Object.assign(G, { mode: 'clock', anim: null, drops: [], pour: null, lv: 0, p: 2 }); return; }
+  if (k === 'M') {
+    muted = !muted; document.getElementById('mute').classList.toggle('off', muted);
+    try { localStorage.setItem('op-muted', muted ? '1' : '0'); } catch (e) {}
+    return;
+  }
+  move(k);
+}
+
+const held = new Map();
+document.querySelectorAll('button[data-k]').forEach(btn => {
+  const k = btn.dataset.k;
+  const down = e => {
+    e.preventDefault(); btn.classList.add('down');
+    if (held.has(btn)) return;
+    press(k);
+    if (k === 'L' || k === 'R') {
+      held.set(btn, setTimeout(function rep() { press(k); held.set(btn, setTimeout(rep, 170)); }, 300));
+    } else held.set(btn, 0);
+  };
+  const up = e => { e.preventDefault(); btn.classList.remove('down'); clearTimeout(held.get(btn)); held.delete(btn); };
+  btn.addEventListener('pointerdown', down);
+  btn.addEventListener('pointerup', up);
+  btn.addEventListener('pointercancel', up);
+  btn.addEventListener('pointerleave', up);
+  btn.addEventListener('contextmenu', e => e.preventDefault());
+});
+document.getElementById('mute').classList.toggle('off', muted);
+const KEYS = { ArrowLeft: 'L', ArrowRight: 'R', a: 'L', d: 'R', '1': 'A', '2': 'B', t: 'T', T: 'T', m: 'M', M: 'M' };
+addEventListener('keydown', e => {
+  const k = KEYS[e.key]; if (!k) return;
+  e.preventDefault();
+  if (e.repeat && k !== 'L' && k !== 'R') return;
+  press(k);
+});
+document.addEventListener('gesturestart', e => e.preventDefault());
+document.addEventListener('dblclick', e => e.preventDefault());
+
+/* ---------- the clock tick ---------- */
+function doTick() {
+  const play = G.mode === 'play';
+
+  // 1. poured oil falls to the forecourt
+  if (G.pour) {
+    const pr = G.pour;
+    pr.stage++;
+    if (pr.stage === 1) {
+      pr.ok = G.boss === (pr.side ? 4 : 0);
+      if (pr.ok) { if (play) { addScore(POUR_PTS[pr.amount]); SFX.drum(pr.amount); } }
+      else if (!play) pr.ok = true;        // the demo never splashes anyone
+    } else if (pr.stage === 2) {
+      if (pr.ok) G.pour = null;
+      else { miss('spill', pr.side); return; }
+    }
+  }
+
+  // 2. drops fall one stage; the bottom stage lands in the bucket or on the floor
+  for (const d of G.drops) d.s++;
+  for (const d of G.drops.filter(d => d.s >= DROP_Y.length)) {
+    G.drops.splice(G.drops.indexOf(d), 1);
+    if (G.p === COLS[d.k]) {
+      if (G.lv >= 3) { G.lv = 0; if (play) return miss('fire', d.k); }   // overflow
+      G.lv++;
+      if (play) { addScore(1); SFX.catch(); }
+    } else if (play) return miss('fire', d.k);
+  }
+  if (G.drops.length) SFX.tick();
+
+  // 3. the pipe springs another leak
+  if (G.drops.length < maxDrops() && Math.random() < spawnP()) {
+    const free = [0, 1, 2].filter(k => !G.drops.some(d => d.k === k));
+    if (free.length) G.drops.push({ k: free[Math.floor(Math.random() * free.length)], s: 0 });
+  }
+
+  // 4. the boss paces the forecourt with his drum
+  if (G.bossWait > 0) G.bossWait--;
+  else {
+    if (Math.random() < 0.12) G.bossDir *= -1;
+    G.boss = Math.max(0, Math.min(4, G.boss + G.bossDir));
+    if (G.boss === 0 || G.boss === 4) { G.bossDir = G.boss === 0 ? 1 : -1; G.bossWait = 1 + Math.floor(Math.random() * 3); }
+  }
+
+  // a held bucket pours as soon as the previous pour has cleared
+  if (play) tryPour();
+  else demoStep();
+}
+
+// Attract mode: the helper catches drops and pours when the boss is close.
+function demoStep() {
+  let target;
+  const low = G.drops.slice().sort((a, b) => b.s - a.s)[0];
+  if (G.lv >= 3 || (!low && G.lv > 0)) target = G.boss <= 2 ? 0 : 4;
+  else target = low ? COLS[low.k] : 2;
+  if (G.p !== target) G.p += Math.sign(target - G.p);
+  if ((G.p === 0 || G.p === 4) && G.lv > 0 && !G.pour) { G.pour = { side: G.p ? 1 : 0, stage: 0, amount: G.lv }; G.lv = 0; }
+}
+
+function update() {
+  const t = now();
+  if (G.anim) {
+    if (t - G.anim.t0 > 1900) {
+      G.anim = null; G.drops = []; G.pour = null; G.lastTick = t;
+      if (G.misses >= 4) gameOver();
+    }
+    return;
+  }
+  if (G.mode === 'over') return;
+  if (t - G.lastTick >= tickMs()) { G.lastTick = t; doTick(); }
+}
+
+/* ---------- what's lit ---------- */
+function activeSet() {
+  const A = new Set(), t = now(), blink = Math.floor(t / 220) % 2 === 0, a = G.anim;
+  if (G.mode !== 'over') {
+    const pouring = G.pour && G.pour.stage === 0 && G.p === (G.pour.side ? 4 : 0);
+    A.add((pouring ? 'hp' : 'h') + G.p);
+    if (!pouring) { A.add('bk' + G.p); for (let l = 1; l <= G.lv; l++) A.add(`lv${G.p}_${l}`); }
+  }
+  for (const d of G.drops) A.add(`d${d.k}_${d.s}`);
+  for (let k = 0; k < 3; k++) if (G.drops.some(d => d.k === k && d.s === 0)) A.add('leak' + k);
+  if (G.pour) {
+    const side = G.pour.side;
+    if (G.pour.stage === 0) A.add('pt' + side);
+    if (G.pour.stage >= 1) { A.add(`pb${side}_0`); A.add(`pb${side}_1`); }
+  }
+  A.add('boss' + G.boss); A.add('drum' + G.boss);
+  A.add('cu0'); A.add('cu1');
+  if (a && a.kind === 'fire' && blink) A.add('f' + a.where);
+  if (a && a.kind === 'spill') {
+    A.delete('cu' + a.where); A.add('cm' + a.where);
+    A.add(`pb${a.where}_0`); A.add(`pb${a.where}_1`); if (blink) A.add(`pb${a.where}_2`);
+  }
+
+  if (G.mode !== 'clock') {
+    A.add(G.game === 'A' ? 'gameA' : 'gameB');
+    if (G.misses > 0) { A.add('missL'); for (let k = 0; k < Math.min(3, G.misses); k++) A.add('miss' + k); }
+    if (!(G.chance && !blink && G.mode === 'play')) digits(String(G.score).padStart(4, ' '), A);
+  } else {
+    const d = new Date(); let h = d.getHours(); const pm = h >= 12; h = h % 12 || 12;
+    digits(String(h).padStart(2, ' ') + String(d.getMinutes()).padStart(2, '0'), A);
+    if (d.getMilliseconds() < 500) A.add('colon');
+    A.add(pm ? 'pm' : 'am');
+  }
+  return A;
+}
+function digits(str, A) { [...str].forEach((ch, d) => { if (ch !== ' ') for (const s of DIGITS[+ch]) A.add(`d${d}${s}`); }); }
+
+/* ---------- layout ---------- */
+function layout() {
+  const bs = getComputedStyle(document.body);
+  const vw = document.body.clientWidth - parseFloat(bs.paddingLeft) - parseFloat(bs.paddingRight);
+  const vh = document.body.clientHeight - parseFloat(bs.paddingTop) - parseFloat(bs.paddingBottom);
+  const land = vw > vh * 1.1;
+  document.body.classList.toggle('land', land);
+  const root = document.documentElement.style, dev = document.getElementById('device');
+  let sw = 200;
+  root.setProperty('--sw', sw + 'px');
+  const extraH = dev.offsetHeight - 2 * sw * 0.75;
+  sw = land ? Math.min((vh - extraH - 8) / 1.5, vw - 2 * 190) : Math.min(vw - 52, (vh - extraH - 8) / 1.5);
+  sw = Math.max(150, Math.floor(sw));
+  root.setProperty('--sw', sw + 'px');
+  dpr = Math.min(3, window.devicePixelRatio || 1);
+  scale = sw / W;
+  for (const cv of canvases) { cv.width = Math.round(sw * dpr); cv.height = Math.round(sw * 0.75 * dpr); }
+  buildGhosts();
+}
+addEventListener('resize', layout);
+addEventListener('orientationchange', () => setTimeout(layout, 200));
+layout();
+
+function frame() { update(); render(activeSet()); requestAnimationFrame(frame); }
+requestAnimationFrame(frame);
+
+if ('serviceWorker' in navigator && location.protocol === 'https:' && window.top === window) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+window.__op = { G, press };   // handy for testing
+</script>
+</body>
+</html>

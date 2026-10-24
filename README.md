@@ -1,5 +1,8 @@
 # Donkey Kong Multi Screen (iPhone)
 
+> Also in this repo: **[Oil Panic Multi Screen](oil-panic/)**, playable at
+> https://immigrationboston7-pixel.github.io/donky/oil-panic/
+
 A fan-made tribute to the 1982 Nintendo Game & Watch **Donkey Kong** (DK-52), the
 first clamshell "Multi Screen" LCD handheld, rebuilt as an iPhone web app.
 It's plain HTML, CSS and JavaScript with no build step and no dependencies. It

@@ -1,0 +1,16 @@
+{
+  "name": "Oil Panic Multi Screen",
+  "short_name": "Oil Panic",
+  "description": "A fan-made tribute to the 1982 Oil Panic multi screen LCD handheld.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#14120c",
+  "theme_color": "#14120c",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
