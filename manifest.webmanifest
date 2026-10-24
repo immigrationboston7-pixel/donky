@@ -1,0 +1,16 @@
+{
+  "name": "Donkey Kong Multi Screen",
+  "short_name": "DK Multi",
+  "description": "A fan-made tribute to the 1982 Donkey Kong multi screen LCD handheld.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#16110d",
+  "theme_color": "#16110d",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
